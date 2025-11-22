@@ -147,8 +147,6 @@ class ProductManager:
                 result.append(prod)
         return result
 
-# ... (Code của 3 class ở trên) ...
-
 # Phần này chỉ chạy khi bạn run file này trực tiếp
 if __name__ == "__main__":
     print("--- TEST NHÂN VIÊN ---")
