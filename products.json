@@ -1,0 +1,16 @@
+[
+{
+  "id": "SP001",
+  "ten_hang": "Laptop ABC",
+  "so_luong_ton": 50,
+  "don_gia": 20000000,
+  "nha_cung_cap": "Cty XYZ"
+},
+{
+  "id": "SP002",
+  "ten_hang": "Chuột không dây",
+  "so_luong_ton": 200,
+  "don_gia": 350000,
+  "nha_cung_cap": "Cty XYZ"
+}
+]
