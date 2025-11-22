@@ -1,0 +1,42 @@
+[
+    {
+        "Ma_cay": "CX003",
+        "Ten_cay": "Xà cừ",
+        "Tuyen_duong": "Lê Hồng Phong",
+        "Chieu_cao": 21.2,
+        "Duong_kinh_than": 0.45,
+        "Tinh_trang": "Có sâu bệnh"
+    },
+    {
+        "Ma_cay": "CX004",
+        "Ten_cay": "Sao đen",
+        "Tuyen_duong": "Nguyễn Trãi",
+        "Chieu_cao": 18.6,
+        "Duong_kinh_than": 0.32,
+        "Tinh_trang": "Bình thường"
+    },
+    {
+        "Ma_cay": "CX005",
+        "Ten_cay": "Me tây",
+        "Tuyen_duong": "Trần Hưng Đạo",
+        "Chieu_cao": 7.4,
+        "Duong_kinh_than": 0.28,
+        "Tinh_trang": "Nghiêng nhẹ"
+    },
+    {
+        "Ma_cay": "CX001",
+        "Ten_cay": "Phượng vĩ",
+        "Tuyen_duong": "Nguyễn Văn Cừ",
+        "Chieu_cao": 6.5,
+        "Duong_kinh_than": 0.25,
+        "Tinh_trang": "Bình thường"
+    },
+    {
+        "Ma_cay": "CX002",
+        "Ten_cay": "Bằng lăng",
+        "Tuyen_duong": "3 Tháng 2",
+        "Chieu_cao": 4.8,
+        "Duong_kinh_than": 0.18,
+        "Tinh_trang": "Sau bão, gãy nhánh"
+    }
+]
