@@ -1,0 +1,16 @@
+[
+  {
+    "id": "NV001",
+  "ten": "Nguyễn Văn A",
+  "chuc_vu": "Quản lý",
+  "ngay_vao_lam": "2023-01-15",
+  "luong": 15000000
+},
+{
+  "id": "NV002",
+  "ten": "Trần Thị B",
+  "chuc_vu": "Nhân viên",
+  "ngay_vao_lam": "2024-03-01",
+  "luong": 8000000
+}
+]
