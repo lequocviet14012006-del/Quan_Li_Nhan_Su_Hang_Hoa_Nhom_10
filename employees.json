@@ -19,5 +19,19 @@
         "chuc_vu": "Thực tập",
         "ngay_vao_lam": "2023-10-01",
         "luong": 5000000
+    },
+    {
+        "id": "NV004",
+        "ten": "Nguyễn Văn Test",
+        "chuc_vu": "Thực tập",
+        "ngay_vao_lam": "2023-10-01",
+        "luong": 5000000
+    },
+    {
+        "id": "NV005",
+        "ten": "Nguyễn Văn Test",
+        "chuc_vu": "Thực tập",
+        "ngay_vao_lam": "2023-10-01",
+        "luong": 5000000
     }
 ]
