@@ -298,18 +298,77 @@ class UngDung(tk.Tk):
     def goi_api(self):
         try:
             import requests
-            r = requests.get('https://dummyjson.com/products')
+            url = 'https://api.npoint.io/881fe47e8b6245bbe49a'
+            r = requests.get(url)
+            
             if r.status_code == 200:
                 data = []
-                for p in r.json().get('products', []):
-                    data.append({'id': f"SP{p['id']:03d}", 'ten': p['title'], 'sl': int(p.get('stock',0)), 'gia': int(p.get('price',0)*25000)})
+                json_response = r.json()
+                
+                # --- TẦNG 1: Xử lý danh sách ---
+                if isinstance(json_response, list):
+                    product_list = json_response
+                else:
+                    product_list = json_response.get('products', [])
+
+                if not product_list:
+                    messagebox.showinfo("Thông báo", "API rỗng.")
+                    return
+
+                # --- TẦNG 2: Vòng lặp xử lý ---
+                for index, p in enumerate(product_list):
+                    # 1. Lấy ID: Lấy trực tiếp chuỗi, không ép về int nữa
+                    # Thử tìm các từ khóa: id, ma, code, productId...
+                    raw_id = p.get('id') or p.get('ma') or p.get('code') or p.get('productId')
+                    
+                    if raw_id is not None:
+                        # Nếu có ID, dùng luôn (chuyển sang chuỗi cho chắc chắn)
+                        str_id = str(raw_id)
+                    else:
+                        # Nếu API hoàn toàn không có ID -> Mới dùng AUTO
+                        str_id = f"SP_AUTO_{index}"
+
+                    # 2. Lấy Tên
+                    raw_name = p.get('title') or p.get('ten') or p.get('name') or p.get('productName')
+                    final_name = raw_name if raw_name else f"Sản phẩm {index}"
+
+                    # 3. Lấy Số lượng (Mặc định 100 nếu không tìm thấy)
+                    raw_stock = p.get('stock') or p.get('sl') or p.get('soluong') or p.get('quantity')
+                    try:
+                        final_stock = int(raw_stock)
+                    except:
+                        final_stock = 100 # <--- Điền 100 nếu không có số lượng
+
+                    # 4. Lấy Giá (Không nhân 25000 nữa)
+                    raw_price = p.get('price') or p.get('gia') or p.get('cost')
+                    try:
+                        final_price = int(raw_price)
+                    except:
+                        final_price = 0
+
+                    # --- Thêm vào danh sách ---s
+                    data.append({
+                        'id': str_id,
+                        'ma': str_id, 
+                        'ten': final_name,
+                        'sl': final_stock,
+                        'gia': final_price
+                    })
+                
+                # --- Lưu và thông báo ---
                 self.dm.save_products(data)
-                messagebox.showinfo("OK", f"Đã nhập {len(data)} sản phẩm")
-                self.load_sp(); self.load_kho()
+                messagebox.showinfo("Thành công", f"Đã nhập {len(data)} sản phẩm!\n(Đã tự điền SL=100 nếu thiếu)")
+                
+                # Cập nhật giao diện
+                self.load_sp()
+                if hasattr(self, 'load_kho'): 
+                    self.load_kho()
+
             else:
-                messagebox.showerror("Lỗi", "Lỗi API")
+                messagebox.showerror("Lỗi", f"Lỗi tải API: {r.status_code}")
         except Exception as e:
-            messagebox.showerror("Lỗi", str(e))
+            print("Lỗi:", e)
+            messagebox.showerror("Lỗi Code", str(e))
 
     # ===================================================================
     # ========================== BÁN HÀNG ================================
