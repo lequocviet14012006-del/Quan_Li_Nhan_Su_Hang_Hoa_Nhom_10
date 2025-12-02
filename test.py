@@ -329,7 +329,7 @@ class UngDung(tk.Tk):
                         str_id = f"SP_AUTO_{index}"
 
                     # 2. Lấy Tên 
-                    #d
+                    #d   
                     raw_name = p.get('title') or p.get('ten') or p.get('name') or p.get('productName')
                     final_name = raw_name if raw_name else f"Sản phẩm {index}"
 
