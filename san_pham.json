@@ -1,0 +1,34 @@
+[
+    {
+        "ma": "SP01",
+        "ten": "Laptop Dell",
+        "sl": 7,
+        "gia": 15000000
+    },
+    {
+        "ma": "SP02",
+        "ten": "iPhone 15",
+        "sl": 3,
+        "gia": 30000000
+    },
+    {
+        "ma": "SP03",
+        "ten": "Chuột Logitech",
+        "sl": 19,
+        "gia": 500000
+    },
+    {
+        "ma": "SP04",
+        "ten": "Bàn phím cơ",
+        "sl": 14,
+        "gia": 1200000
+    },
+    {
+        "ma": "SP05",
+        "ten": "Tai nghe Sony",
+        "sl": 7,
+        "gia": 4500000
+        
+
+    }
+]
