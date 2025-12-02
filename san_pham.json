@@ -1,34 +1,352 @@
 [
     {
+        "id": "SP01",
         "ma": "SP01",
-        "ten": "Laptop Dell",
+        "ten": "Laptop Dell Inspiron 15",
         "sl": 7,
         "gia": 15000000
     },
     {
+        "id": "SP02",
         "ma": "SP02",
-        "ten": "iPhone 15",
+        "ten": "iPhone 15 Pro Max",
         "sl": 3,
         "gia": 30000000
     },
     {
+        "id": "SP03",
         "ma": "SP03",
-        "ten": "Chuột Logitech",
+        "ten": "Chuột Logitech G102",
         "sl": 19,
         "gia": 500000
     },
     {
+        "id": "SP04",
         "ma": "SP04",
-        "ten": "Bàn phím cơ",
+        "ten": "Bàn phím cơ Keychron",
         "sl": 14,
         "gia": 1200000
     },
     {
+        "id": "SP05",
         "ma": "SP05",
-        "ten": "Tai nghe Sony",
-        "sl": 7,
+        "ten": "Tai nghe Sony WH-1000XM5",
+        "sl": 5,
+        "gia": 6500000
+    },
+    {
+        "id": "SP06",
+        "ma": "SP06",
+        "ten": "Màn hình LG 24 inch",
+        "sl": 10,
+        "gia": 3200000
+    },
+    {
+        "id": "SP07",
+        "ma": "SP07",
+        "ten": "RAM Kingston 8GB",
+        "sl": 50,
+        "gia": 750000
+    },
+    {
+        "id": "SP08",
+        "ma": "SP08",
+        "ten": "SSD Samsung 500GB",
+        "sl": 30,
+        "gia": 1400000
+    },
+    {
+        "id": "SP09",
+        "ma": "SP09",
+        "ten": "Sạc dự phòng Anker",
+        "sl": 25,
+        "gia": 800000
+    },
+    {
+        "id": "SP10",
+        "ma": "SP10",
+        "ten": "Cáp sạc iPhone Type-C",
+        "sl": 100,
+        "gia": 250000
+    },
+    {
+        "id": "SP11",
+        "ma": "SP11",
+        "ten": "MacBook Air M2",
+        "sl": 4,
+        "gia": 26000000
+    },
+    {
+        "id": "SP12",
+        "ma": "SP12",
+        "ten": "Samsung Galaxy S24 Ultra",
+        "sl": 6,
+        "gia": 28000000
+    },
+    {
+        "id": "SP13",
+        "ma": "SP13",
+        "ten": "iPad Gen 9",
+        "sl": 12,
+        "gia": 7500000
+    },
+    {
+        "id": "SP14",
+        "ma": "SP14",
+        "ten": "Loa Bluetooth JBL",
+        "sl": 15,
+        "gia": 2100000
+    },
+    {
+        "id": "SP15",
+        "ma": "SP15",
+        "ten": "Webcam Logitech C920",
+        "sl": 8,
+        "gia": 1800000
+    },
+    {
+        "id": "SP16",
+        "ma": "SP16",
+        "ten": "Ghế công thái học",
+        "sl": 5,
         "gia": 4500000
-        
-
+    },
+    {
+        "id": "SP17",
+        "ma": "SP17",
+        "ten": "Lót chuột cỡ lớn",
+        "sl": 40,
+        "gia": 150000
+    },
+    {
+        "id": "SP18",
+        "ma": "SP18",
+        "ten": "Tay cầm chơi game PS5",
+        "sl": 9,
+        "gia": 1600000
+    },
+    {
+        "id": "SP19",
+        "ma": "SP19",
+        "ten": "Ổ cứng HDD 1TB WD",
+        "sl": 20,
+        "gia": 1100000
+    },
+    {
+        "id": "SP20",
+        "ma": "SP20",
+        "ten": "USB 64GB Sandisk",
+        "sl": 60,
+        "gia": 120000
+    },
+    {
+        "id": "SP21",
+        "ma": "SP21",
+        "ten": "Laptop Asus TUF Gaming",
+        "sl": 6,
+        "gia": 21000000
+    },
+    {
+        "id": "SP22",
+        "ma": "SP22",
+        "ten": "Chuột không dây Apple",
+        "sl": 11,
+        "gia": 2000000
+    },
+    {
+        "id": "SP23",
+        "ma": "SP23",
+        "ten": "Bàn phím giả cơ Dareu",
+        "sl": 22,
+        "gia": 450000
+    },
+    {
+        "id": "SP24",
+        "ma": "SP24",
+        "ten": "Tai nghe Airpods 3",
+        "sl": 13,
+        "gia": 4200000
+    },
+    {
+        "id": "SP25",
+        "ma": "SP25",
+        "ten": "Đồng hồ Apple Watch SE",
+        "sl": 8,
+        "gia": 6000000
+    },
+    {
+        "id": "SP26",
+        "ma": "SP26",
+        "ten": "Đồng hồ Garmin",
+        "sl": 4,
+        "gia": 8500000
+    },
+    {
+        "id": "SP27",
+        "ma": "SP27",
+        "ten": "Máy in Canon 2900",
+        "sl": 3,
+        "gia": 3800000
+    },
+    {
+        "id": "SP28",
+        "ma": "SP28",
+        "ten": "Router Wifi TP-Link",
+        "sl": 18,
+        "gia": 650000
+    },
+    {
+        "id": "SP29",
+        "ma": "SP29",
+        "ten": "Card màn hình RTX 3060",
+        "sl": 5,
+        "gia": 8900000
+    },
+    {
+        "id": "SP30",
+        "ma": "SP30",
+        "ten": "Case máy tính Xigmatek",
+        "sl": 10,
+        "gia": 900000
+    },
+    {
+        "id": "SP31",
+        "ma": "SP31",
+        "ten": "Nguồn máy tính 650W",
+        "sl": 14,
+        "gia": 1200000
+    },
+    {
+        "id": "SP32",
+        "ma": "SP32",
+        "ten": "Quạt tản nhiệt CPU",
+        "sl": 25,
+        "gia": 550000
+    },
+    {
+        "id": "SP33",
+        "ma": "SP33",
+        "ten": "Micro thu âm HyperX",
+        "sl": 6,
+        "gia": 2800000
+    },
+    {
+        "id": "SP34",
+        "ma": "SP34",
+        "ten": "Giá đỡ màn hình (Arm)",
+        "sl": 12,
+        "gia": 750000
+    },
+    {
+        "id": "SP35",
+        "ma": "SP35",
+        "ten": "Máy tính bảng Xiaomi Pad",
+        "sl": 9,
+        "gia": 8000000
+    },
+    {
+        "id": "SP36",
+        "ma": "SP36",
+        "ten": "Điện thoại Oppo Reno",
+        "sl": 15,
+        "gia": 9500000
+    },
+    {
+        "id": "SP37",
+        "ma": "SP37",
+        "ten": "Điện thoại Xiaomi Redmi",
+        "sl": 20,
+        "gia": 4500000
+    },
+    {
+        "id": "SP38",
+        "ma": "SP38",
+        "ten": "Kính cường lực iPhone",
+        "sl": 200,
+        "gia": 50000
+    },
+    {
+        "id": "SP39",
+        "ma": "SP39",
+        "ten": "Ốp lưng chống sốc",
+        "sl": 150,
+        "gia": 120000
+    },
+    {
+        "id": "SP40",
+        "ma": "SP40",
+        "ten": "Gậy chụp ảnh 3 chân",
+        "sl": 30,
+        "gia": 180000
+    },
+    {
+        "id": "SP41",
+        "ma": "SP41",
+        "ten": "Đèn bàn học chống cận",
+        "sl": 16,
+        "gia": 350000
+    },
+    {
+        "id": "SP42",
+        "ma": "SP42",
+        "ten": "Ổ cắm điện thông minh",
+        "sl": 22,
+        "gia": 250000
+    },
+    {
+        "id": "SP43",
+        "ma": "SP43",
+        "ten": "Robot hút bụi Xiaomi",
+        "sl": 4,
+        "gia": 5500000
+    },
+    {
+        "id": "SP44",
+        "ma": "SP44",
+        "ten": "Máy lọc không khí",
+        "sl": 5,
+        "gia": 3200000
+    },
+    {
+        "id": "SP45",
+        "ma": "SP45",
+        "ten": "Camera an ninh Wifi",
+        "sl": 18,
+        "gia": 600000
+    },
+    {
+        "id": "SP46",
+        "ma": "SP46",
+        "ten": "Thẻ nhớ MicroSD 32GB",
+        "sl": 80,
+        "gia": 90000
+    },
+    {
+        "id": "SP47",
+        "ma": "SP47",
+        "ten": "Balo laptop chống nước",
+        "sl": 25,
+        "gia": 450000
+    },
+    {
+        "id": "SP48",
+        "ma": "SP48",
+        "ten": "Túi chống sốc Macbook",
+        "sl": 35,
+        "gia": 200000
+    },
+    {
+        "id": "SP49",
+        "ma": "SP49",
+        "ten": "Bộ vệ sinh máy tính",
+        "sl": 50,
+        "gia": 30000
+    },
+    {
+        "id": "SP50",
+        "ma": "SP50",
+        "ten": "Keo tản nhiệt MX-4",
+        "sl": 40,
+        "gia": 150000
     }
 ]
