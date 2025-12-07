@@ -1,795 +1,767 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import json, os
-from datetime import datetime, date
+from datetime import datetime
+import requests
 
-# ============================
-#   DATA MANAGER
-# ============================
-class DataManager:
-    def __init__(self, users_file='users.json', products_file='san_pham.json', invoices_file='hoa_don.json'):
-
-        self.users_file = users_file
-        self.products_file = products_file
-        self.invoices_file = invoices_file
-        self._khoi_tao_mac_dinh()
-
-    # ----- Hàm chung -----
-    def doc_json(self, f):
-        if not os.path.exists(f):
-            return []
-        try:
-            with open(f, 'r', encoding='utf-8') as fd:
-                return json.load(fd)
-        except:
-            return []
-
-    def luu_json(self, f, d):
-        with open(f, 'w', encoding='utf-8') as fd:
-            json.dump(d, fd, ensure_ascii=False, indent=4)
-
-    # ----- Khởi tạo dữ liệu mặc định -----
-    def _khoi_tao_mac_dinh(self):
-        if not os.path.exists(self.users_file):
-            users = [
-                {"ma_nv":"NV000","username":"admin","password":"admin123","role":"admin","ten":"Quản Trị Viên",
-                 "ngay_vao_lam":"2020-01-01","luong":2000000},
-                {"ma_nv":"NV001","username":"nv1","password":"user123","role":"user","ten":"Nhân Viên Mẫu",
-                 "ngay_vao_lam":"2022-01-01","luong":1800000}
-            ]
-            self.luu_json(self.users_file, users)
-        if not os.path.exists(self.products_file):
-            self.luu_json(self.products_file, [])
-        if not os.path.exists(self.invoices_file):
-            self.luu_json(self.invoices_file, [])
-
-    # ============ USERS ============
-    def load_users(self): return self.doc_json(self.users_file)
-    def save_users(self, d): self.luu_json(self.users_file, d)
-
-    def find_user_by_username(self, username):
-        for u in self.load_users():
-            if u["username"] == username:
-                return u
-        return None
-
-    def find_user_by_ma(self, ma_nv):
-        for u in self.load_users():
-            if u.get("ma_nv") == ma_nv:
-                return u
-        return None
-
-    # ====== ADD USER ======
-    def add_user(self, user):
-        users = self.load_users()
-
-        # Ràng buộc trùng mã & username
-        for u in users:
-            if u["username"] == user["username"]:
-                return False, "Username đã tồn tại"
-            if u["ma_nv"] == user["ma_nv"]:
-                return False, "Mã nhân viên đã tồn tại"
-#
-        # Ràng buộc ngày & lương
-        try:
-            ngay = datetime.strptime(user["ngay_vao_lam"], "%Y-%m-%d").date()
-        except Exception:
-            return False, "Ngày vào làm phải theo định dạng YYYY-MM-DD"
-
-        today = date.today()
-        if ngay > today:
-            return False, "Ngày vào làm phải nhỏ hơn hoặc bằng ngày hiện tại"
-
-        LUONG_CO_BAN = 1500000
-        try:
-            luong = int(user["luong"])
-        except Exception:
-            return False, "Lương phải là một số nguyên"#
-
-        if luong <= 0:
-            return False, "Lương phải > 0"
-        if luong < LUONG_CO_BAN:
-            return False, f"Lương phải lớn hơn hoặc bằng lương cơ bản ({LUONG_CO_BAN:,}đ)"
-
-        # chuẩn hóa
-        user["luong"] = luong
-        users.append(user)
-        self.save_users(users)
-        return True, "Thêm nhân viên thành công"
-
-    # ====== UPDATE USER ======
-    def update_user(self, ma_nv, new_data):
-        users = self.load_users()
-
-        # kiểm tra tồn tại
-        idx = None
-        for i,u in enumerate(users):
-            if u["ma_nv"] == ma_nv:
-                idx = i
-                break
-        if idx is None:
-            return False, "Không tìm thấy nhân viên"
-
-        # nếu đổi username hoặc ma_nv => không được trùng với các user khác
-        for u in users:
-            if u["ma_nv"] != ma_nv:
-                if new_data.get("username") and new_data.get("username") == u.get("username"):
-                    return False, "Username mới bị trùng"
-                if new_data.get("ma_nv") and new_data.get("ma_nv") == u.get("ma_nv"):
-                    return False, "Mã nhân viên mới bị trùng"
-
-        # kiểm tra ngày vào làm
-        if "ngay_vao_lam" in new_data:
-            try:
-                ngay = datetime.strptime(new_data["ngay_vao_lam"], "%Y-%m-%d").date()
-            except Exception:
-                return False, "Ngày vào làm phải theo định dạng YYYY-MM-DD"
-            if ngay >= date.today():
-                return False, "Ngày vào làm phải nhỏ hơn ngày hiện tại"
-
-        # kiểm tra lương
-        if "luong" in new_data:
-            try:
-                luong = int(new_data["luong"])
-            except Exception:
-                return False, "Lương phải là số nguyên"
-            LUONG_CO_BAN = 1500000
-            if luong <= 0:
-                return False, "Lương phải > 0"
-            if luong < LUONG_CO_BAN:
-                return False, f"Lương phải lớn hơn hoặc bằng lương cơ bản ({LUONG_CO_BAN:,}đ)"
-            new_data["luong"] = luong
-
-        users[idx].update(new_data)
-        self.save_users(users)
-        return True, "Cập nhật nhân viên thành công"
-
-    # ====== DELETE USER ======
-    def delete_user(self, ma_nv, current_user_username=None):
-        users = self.load_users()
-        target = next((u for u in users if u["ma_nv"] == ma_nv), None)
-
-        if not target:
-            return False, "Không tìm thấy nhân viên"
-
-        if current_user_username and target["username"] == current_user_username:
-            return False, "Không thể xóa chính bạn"
-
-        invoices = self.load_invoices()
-        if any(inv.get("nguoi_username") == target["username"] for inv in invoices):
-            return False, "Nhân viên đã có lịch sử bán hàng, không thể xóa"
-
-        new_users = [u for u in users if u["ma_nv"] != ma_nv]
-        self.save_users(new_users)
-        return True, "Xóa nhân viên thành công"
-
-    # ============ PRODUCTS ============
-    def load_products(self):
-        data = self.doc_json(self.products_file)
-
-        # Chuyển khóa "ma" → "id" để tương thích code cũ
-        for sp in data:
-            if "ma" in sp:
-                sp["id"] = sp["ma"]
-
-        return data
-
-    def save_products(self, d): self.luu_json(self.products_file, d)
-
-    def add_product(self, p):
-        prods = self.load_products()
-        if any(x["id"] == p["id"] for x in prods):
-            return False, "Mã sản phẩm đã tồn tại"
-        prods.append(p)
-        self.save_products(prods)
-        return True, "Thêm sản phẩm thành công"
-
-    def update_product(self, id_old, new_data):
-        prods = self.load_products()
-        for p in prods:
-            if p["id"] == id_old:
-                if new_data.get("id") and new_data["id"] != id_old:
-                    if any(x["id"] == new_data["id"] for x in prods):
-                        return False, "Mã mới bị trùng"
-                p.update(new_data)
-                self.save_products(prods)
-                return True, "Cập nhật sản phẩm thành công"
-        return False, "Không tìm thấy sản phẩm"
-
-    def delete_product(self, prod_id):
-        prods = self.load_products()
-
-        invoices = self.load_invoices()
-        for hd in invoices:
-            if any(item.get("id") == prod_id for item in hd.get("chitiet", [])):
-                return False, "Sản phẩm đã tồn tại trong hóa đơn, không thể xóa"
-
-        new_list = [x for x in prods if x["id"] != prod_id]
-        self.save_products(new_list)
-        return True, "Xóa thành công"
-
-    # ============ INVOICES ============
-    def load_invoices(self): return self.doc_json(self.invoices_file)
-    def save_invoices(self, d): self.luu_json(self.invoices_file, d)
-
-    def add_invoice(self, invoice):
-        h = self.load_invoices()
-        h.append(invoice)
-        self.save_invoices(h)
-        return True
+# ==============================
+# CẤU HÌNH FILE DỮ LIỆU
+# ==============================
+FILE_USER = "users.json"
+FILE_SP   = "san_pham.json"
+FILE_HD   = "hoa_don.json"
+FILE_SP_BAK = "san_pham_backup.json"   # backup dùng cho nút QUAY LẠI (Undo) khi xóa kho
 
 
-# ===================================================================
-# ========================= ỨNG DỤNG GUI =============================
-# ===================================================================
-class UngDung(tk.Tk):
+class UngDung:
     def __init__(self):
-        super().__init__()
-        self.title("Phần Mềm Quản Lý Bán Hàng")
-        self.geometry("1200x750")
+        self.root = tk.Tk()
+        self.root.title("Phần Mềm Quản Lý Bán Hàng (Pro Simple)")
+        self.root.geometry("1000x700")
 
-        self.dm = DataManager()
-        self.user = None
-        self.mode_kho = None
-        self.mode_ns = None
-        self.gio = []
+        # trạng thái phiên làm việc (không global)
+        self.nguoi_dang_nhap = None
+        self.gio_hang = []          # [{id, ten, sl, gia, tt}]
 
-        self.man_hinh_login()
+        # chế độ thao tác
+        self.che_do_kho = ""
+        self.che_do_ns = ""
 
-    # ---------------- LOGIN ----------------
-    def man_hinh_login(self):
-        for w in self.winfo_children(): w.destroy()
-        f = tk.Frame(self); f.pack(pady=80)
+        # placeholders widget (để tránh None trong lúc tạo UI)
+        self.entry_user = self.entry_pass = self.combo_role = None
 
-        tk.Label(f, text="ĐĂNG NHẬP", font=("Arial", 22, "bold")).pack(pady=10)
-        tk.Label(f, text="User:").pack(); e_u = tk.Entry(f); e_u.pack()
-        tk.Label(f, text="Pass:").pack(); e_p = tk.Entry(f, show="*"); e_p.pack()
+        self.tree_ban_hang = None
+        self.tree_gio = None
+        self.lbl_tong_tien = None
 
-        tk.Label(f, text="Vai trò:").pack()
-        role_var = tk.StringVar(value="user")
-        ttk.Combobox(f, textvariable=role_var, values=["admin","user"], state="readonly").pack(pady=5)
+        self.tree_lich_su = None
 
-        def login(role_expected=None):
-            username = e_u.get().strip()
-            password = e_p.get().strip()
-            if not username or not password:
-                messagebox.showerror("Lỗi", "Nhập user & pass")
-                return
-            user = self.dm.find_user_by_username(username)
-            if not user or user.get("password") != password:
-                messagebox.showerror("Lỗi", "Sai thông tin đăng nhập")
-                return
-            if role_expected and user.get("role") != role_expected:
-                messagebox.showerror("Lỗi", f"Tài khoản không thuộc vai trò {role_expected}")
-                return
-            if role_var.get() != user.get("role"):
-                messagebox.showerror("Lỗi", "Bạn chọn sai vai trò")
-                return
-            self.user = user
-            messagebox.showinfo("Chào", f"Xin chào {user.get('ten')}")
-            self.man_hinh_chinh()
+        self.e_k_ma = self.e_k_ten = self.e_k_sl = self.e_k_gia = None
+        self.tree_kho = None
 
-        tk.Button(f, text="Đăng nhập", bg="blue", fg="white", command=login).pack(pady=10)
+        self.e_n_ma = self.e_n_user = self.e_n_pass = None
+        self.e_n_ten = self.e_n_ngay = self.e_n_luong = None
+        self.c_n_role = None
+        self.tree_ns = None
 
-    # ---------------- MAIN SCREEN ----------------
-    def man_hinh_chinh(self):
-        for w in self.winfo_children(): w.destroy()
-        m = tk.Menu(self); self.config(menu=m)
-        mn = tk.Menu(m, tearoff=0); m.add_cascade(label="Hệ thống", menu=mn)
-        if self.user and self.user.get("role") == "admin":
-            mn.add_command(label="📥 Nhập hàng API", command=self.goi_api)
-        mn.add_command(label="Đăng xuất", command=self.dang_xuat)
+        self.khoi_tao_du_lieu()
+        self.hien_thi_manh_hinh_login()
 
-        self.nb = ttk.Notebook(self); self.nb.pack(fill="both", expand=True)
+    # ==============================
+    # TIỆN ÍCH FILE JSON + CHUẨN HÓA DỮ LIỆU
+    # ==============================
+    def doc_file(self, ten_file):
+        if not os.path.exists(ten_file):
+            return []
+        try:
+            with open(ten_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except Exception:
+            return []
 
-        # ==== BÁN HÀNG ====
-        self.tab_ban = tk.Frame(self.nb); self.nb.add(self.tab_ban, text="Bán Hàng"); self.build_ban_hang()
-        # ==== LỊCH SỬ ====
-        self.tab_ls = tk.Frame(self.nb); self.nb.add(self.tab_ls, text="Lịch Sử Hóa Đơn"); self.build_ls()
-        # ==== KHO & NHÂN SỰ (ADMIN) ====
-        if self.user and self.user.get("role") == "admin":
-            self.tab_kho = tk.Frame(self.nb); self.nb.add(self.tab_kho, text="Quản Lý Kho"); self.build_kho()
-            self.tab_ns = tk.Frame(self.nb); self.nb.add(self.tab_ns, text="Quản Lý Nhân Sự"); self.build_nhan_su()
+    def ghi_file(self, ten_file, du_lieu):
+        with open(ten_file, "w", encoding="utf-8") as f:
+            json.dump(du_lieu, f, ensure_ascii=False, indent=4)
+
+    def khoi_tao_du_lieu(self):
+        # users mặc định
+        if not os.path.exists(FILE_USER):
+            users = [
+                {"ma_nv": "NV000", "username": "admin", "password": "123", "role": "admin",
+                 "ten": "Quản Trị Viên", "ngay_vao_lam": "2020-01-01", "luong": 2000000},
+                {"ma_nv": "NV001", "username": "nv1", "password": "123", "role": "user",
+                 "ten": "Nhân Viên", "ngay_vao_lam": "2022-01-01", "luong": 1800000},
+            ]
+            self.ghi_file(FILE_USER, users)
+
+        # products + invoices mặc định rỗng
+        if not os.path.exists(FILE_SP):
+            self.ghi_file(FILE_SP, [])
+        if not os.path.exists(FILE_HD):
+            self.ghi_file(FILE_HD, [])
+
+        # Chuẩn hóa dữ liệu nếu file đã tồn tại nhưng thiếu key
+        self.chuan_hoa_users()
+        self.chuan_hoa_products()
+
+    def chuan_hoa_users(self):
+        ds = self.doc_file(FILE_USER)
+        thay_doi = False
+
+        # Bảo đảm mỗi bản ghi có ma_nv (nếu thiếu sẽ tự sinh NVxxx)
+        used = set()
+        for u in ds:
+            if "ma_nv" in u and u["ma_nv"]:
+                used.add(u["ma_nv"])
+
+        def next_nv():
+            i = 0
+            while True:
+                code = f"NV{str(i).zfill(3)}"
+                if code not in used:
+                    used.add(code)
+                    return code
+                i += 1
+
+        for u in ds:
+            if not u.get("ma_nv"):
+                u["ma_nv"] = next_nv()
+                thay_doi = True
+
+            # chuẩn key cũ/khác tên (nếu có) -> ưu tiên giữ nguyên, nhưng đảm bảo tồn tại
+            u.setdefault("username", u.get("user", ""))
+            u.setdefault("password", u.get("pass", ""))
+            u.setdefault("role", "user")
+            u.setdefault("ten", "")
+            u.setdefault("ngay_vao_lam", u.get("ngay_vao", "2000-01-01"))
+            u.setdefault("luong", 1500000)
+
+        if thay_doi:
+            self.ghi_file(FILE_USER, ds)
+
+    def chuan_hoa_products(self):
+        ds = self.doc_file(FILE_SP)
+        thay_doi = False
+        for p in ds:
+            # cho phép file cũ dùng "ma" thay "id"
+            if "id" not in p and "ma" in p:
+                p["id"] = p["ma"]
+                thay_doi = True
+            if "ten" not in p and "name" in p:
+                p["ten"] = p["name"]
+                thay_doi = True
+            p.setdefault("sl", 0)
+            p.setdefault("gia", 0)
+        if thay_doi:
+            self.ghi_file(FILE_SP, ds)
+
+    # ==============================
+    # ĐĂNG NHẬP / ĐĂNG XUẤT
+    # ==============================
+    def dang_nhap(self):
+        user = (self.entry_user.get() or "").strip()
+        pw = (self.entry_pass.get() or "").strip()
+        role = (self.combo_role.get() or "").strip()
+
+        ds = self.doc_file(FILE_USER)
+        tim = next((u for u in ds if u.get("username") == user and u.get("password") == pw), None)
+
+        if not tim:
+            messagebox.showerror("Lỗi", "Sai tên đăng nhập hoặc mật khẩu")
+            return
+        if tim.get("role") != role:
+            messagebox.showerror("Lỗi", "Sai vai trò (Role)")
+            return
+
+        self.nguoi_dang_nhap = tim
+        self.gio_hang = []
+        messagebox.showinfo("Xin chào", f"Chào mừng {tim.get('ten','')}")
+        self.hien_thi_manh_hinh_chinh()
 
     def dang_xuat(self):
-        self.user = None
-        self.man_hinh_login()
+        self.nguoi_dang_nhap = None
+        self.gio_hang = []
+        self.hien_thi_manh_hinh_login()
 
-    def goi_api(self):
-        try:
-            import requests
-            url = 'https://api.npoint.io/881fe47e8b6245bbe49a'
-            r = requests.get(url)
-            
-            if r.status_code == 200:
-                data = []
-                json_response = r.json()
-                
-                # --- TẦNG 1: Xử lý danh sách ---
-                if isinstance(json_response, list):
-                    product_list = json_response
-                else:
-                    product_list = json_response.get('products', [])
+    # ==============================
+    # GIAO DIỆN LOGIN
+    # ==============================
+    def xoa_man_hinh(self):
+        for w in self.root.winfo_children():
+            w.destroy()
 
-                if not product_list:
-                    messagebox.showinfo("Thông báo", "API rỗng.")
+    def hien_thi_manh_hinh_login(self):
+        self.xoa_man_hinh()
+
+        khung = tk.Frame(self.root)
+        khung.pack(pady=50)
+
+        tk.Label(khung, text="ĐĂNG NHẬP HỆ THỐNG", font=("Arial", 16, "bold")).pack(pady=10)
+
+        tk.Label(khung, text="Username:").pack()
+        self.entry_user = tk.Entry(khung)
+        self.entry_user.pack()
+
+        tk.Label(khung, text="Password:").pack()
+        self.entry_pass = tk.Entry(khung, show="*")
+        self.entry_pass.pack()
+
+        tk.Label(khung, text="Vai trò:").pack()
+        self.combo_role = ttk.Combobox(khung, values=["admin", "user"], state="readonly")
+        self.combo_role.current(1)
+        self.combo_role.pack(pady=5)
+
+        tk.Button(khung, text="Đăng nhập", bg="blue", fg="white", command=self.dang_nhap).pack(pady=10)
+
+    # ==============================
+    # MÀN HÌNH CHÍNH (TABS)
+    # ==============================
+    def hien_thi_manh_hinh_chinh(self):
+        self.xoa_man_hinh()
+
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        menu_ht = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Hệ thống", menu=menu_ht)
+
+        if self.nguoi_dang_nhap and self.nguoi_dang_nhap.get("role") == "admin":
+            menu_ht.add_command(label="Tải API Sản phẩm", command=self.nap_du_lieu_api)
+        menu_ht.add_separator()
+        menu_ht.add_command(label="Đăng xuất", command=self.dang_xuat)
+
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True)
+
+        tab_ban = tk.Frame(notebook)
+        notebook.add(tab_ban, text="Bán Hàng")
+        self.xay_dung_tab_ban_hang(tab_ban)
+
+        tab_ls = tk.Frame(notebook)
+        notebook.add(tab_ls, text="Lịch Sử Hóa Đơn")
+        self.xay_dung_tab_lich_su(tab_ls)
+
+        if self.nguoi_dang_nhap.get("role") == "admin":
+            tab_kho = tk.Frame(notebook)
+            notebook.add(tab_kho, text="Quản Lý Kho")
+            self.xay_dung_tab_kho(tab_kho)
+
+            tab_ns = tk.Frame(notebook)
+            notebook.add(tab_ns, text="Quản Lý Nhân Sự")
+            self.xay_dung_tab_nhan_su(tab_ns)
+
+    # ==============================
+    # TAB BÁN HÀNG
+    # ==============================
+    def xay_dung_tab_ban_hang(self, parent):
+        f_trai = tk.LabelFrame(parent, text="Danh sách sản phẩm")
+        f_trai.pack(side="left", fill="both", expand=True)
+
+        self.tree_ban_hang = ttk.Treeview(f_trai, columns=("id", "ten", "sl", "gia"), show="headings")
+        for c, t, w in [("id", "Mã", 70), ("ten", "Tên SP", 200), ("sl", "Tồn kho", 80), ("gia", "Giá bán", 120)]:
+            self.tree_ban_hang.heading(c, text=t)
+            self.tree_ban_hang.column(c, width=w)
+        self.tree_ban_hang.pack(fill="both", expand=True)
+        self.tree_ban_hang.bind("<Double-1>", self.them_vao_gio)
+
+        f_phai = tk.LabelFrame(parent, text="Giỏ hàng")
+        f_phai.pack(side="right", fill="both", expand=True)
+
+        self.tree_gio = ttk.Treeview(f_phai, columns=("ten", "sl", "tt"), show="headings")
+        self.tree_gio.heading("ten", text="Tên SP")
+        self.tree_gio.heading("sl", text="SL Mua")
+        self.tree_gio.heading("tt", text="Thành tiền")
+        self.tree_gio.pack(fill="both", expand=True)
+
+        self.lbl_tong_tien = tk.Label(f_phai, text="Tổng: 0 VNĐ", fg="red", font=("Arial", 14))
+        self.lbl_tong_tien.pack(pady=5)
+
+        tk.Button(f_phai, text="THANH TOÁN", bg="orange", command=self.thanh_toan).pack(fill="x")
+        tk.Button(f_phai, text="Xóa giỏ hàng", command=self.xoa_gio_hang).pack(fill="x")
+
+        self.load_data_ban_hang()
+
+    def load_data_ban_hang(self):
+        if not self.tree_ban_hang:
+            return
+        for i in self.tree_ban_hang.get_children():
+            self.tree_ban_hang.delete(i)
+
+        ds_sp = self.doc_file(FILE_SP)
+        for sp in ds_sp:
+            self.tree_ban_hang.insert("", "end",
+                                      values=(sp.get("id"), sp.get("ten"), sp.get("sl"), f"{sp.get('gia',0):,}"))
+
+        # Đồng bộ giỏ: loại bỏ mặt hàng đã bị xóa khỏi kho (để tránh “mơ” hàng không tồn tại)
+        id_con_lai = {sp.get("id") for sp in ds_sp}
+        self.gio_hang = [m for m in self.gio_hang if m.get("id") in id_con_lai]
+        self.cap_nhat_gio()
+
+    def them_vao_gio(self, event=None):
+        if not self.tree_ban_hang:
+            return
+        chon = self.tree_ban_hang.focus()
+        if not chon:
+            return
+
+        id_sp, ten, ton_kho_str, gia_str = self.tree_ban_hang.item(chon, "values")
+        ton_kho = int(ton_kho_str)
+        gia = int(str(gia_str).replace(",", ""))
+
+        top = tk.Toplevel(self.root)
+        top.title("Chọn số lượng")
+        tk.Label(top, text=f"Mua: {ten}").pack(padx=10, pady=6)
+
+        e_sl = tk.Entry(top)
+        e_sl.pack(padx=10, pady=6)
+        e_sl.focus()
+
+        def xac_nhan():
+            try:
+                sl_mua = int(e_sl.get())
+                if sl_mua <= 0:
+                    messagebox.showerror("Lỗi", "Số lượng phải > 0")
+                    return
+                if sl_mua > ton_kho:
+                    messagebox.showerror("Lỗi", "Không đủ hàng trong kho")
                     return
 
-                # --- TẦNG 2: Vòng lặp xử lý ---
-                for index, p in enumerate(product_list):
-                    # 1. Lấy ID: Lấy trực tiếp chuỗi, không ép về int nữa
-                    # Thử tìm các từ khóa: id, ma, code, productId...
-                    raw_id = p.get('id') or p.get('ma') or p.get('code') or p.get('productId')
-                    
-                    if raw_id is not None:
-                        # Nếu có ID, dùng luôn (chuyển sang chuỗi cho chắc chắn)
-                        str_id = str(raw_id)
-                    else:
-                        # Nếu API hoàn toàn không có ID -> Mới dùng AUTO
-                        str_id = f"SP_AUTO_{index}"
+                for m in self.gio_hang:
+                    if m.get("id") == id_sp:
+                        m["sl"] += sl_mua
+                        m["tt"] = m["sl"] * m["gia"]
+                        break
+                else:
+                    self.gio_hang.append({"id": id_sp, "ten": ten, "sl": sl_mua, "gia": gia, "tt": sl_mua * gia})
 
-                    # 2. Lấy Tên 
-                    #d   
-                    raw_name = p.get('title') or p.get('ten') or p.get('name') or p.get('productName')
-                    final_name = raw_name if raw_name else f"Sản phẩm {index}"
+                self.cap_nhat_gio()
+                top.destroy()
+            except Exception:
+                messagebox.showerror("Lỗi", "Nhập sai số lượng")
 
-                    # 3. Lấy Số lượng (Mặc định 100 nếu không tìm thấy)
-                    raw_stock = p.get('stock') or p.get('sl') or p.get('soluong') or p.get('quantity')
-                    try:
-                        final_stock = int(raw_stock)
-                    except:
-                        final_stock = 100 # <--- Điền 100 nếu không có số lượng
+        tk.Button(top, text="OK", command=xac_nhan).pack(padx=10, pady=10)
 
-                    # 4. Lấy Giá (Không nhân 25000 nữa)
-                    raw_price = p.get('price') or p.get('gia') or p.get('cost')
-                    try:
-                        final_price = int(raw_price)
-                    except:
-                        final_price = 0
+    def cap_nhat_gio(self):
+        if not self.tree_gio:
+            return
+        for i in self.tree_gio.get_children():
+            self.tree_gio.delete(i)
 
-                    # --- Thêm vào danh sách ---s
-                    data.append({
-                        'id': str_id,
-                        'ma': str_id, 
-                        'ten': final_name,
-                        'sl': final_stock,
-                        'gia': final_price
-                    })
-                
-                # --- Lưu và thông báo ---
-                self.dm.save_products(data)
-                messagebox.showinfo("Thành công", f"Đã nhập {len(data)} sản phẩm!\n(Đã tự điền SL=100 nếu thiếu)")
-                
-                # Cập nhật giao diện
-                self.load_sp()
-                if hasattr(self, 'load_kho'): 
-                    self.load_kho()
-
-            else:
-                messagebox.showerror("Lỗi", f"Lỗi tải API: {r.status_code}")
-        except Exception as e:
-            print("Lỗi:", e)
-            messagebox.showerror("Lỗi Code", str(e))
-
-    # ===================================================================
-    # ========================== BÁN HÀNG ================================
-    # ===================================================================
-    def build_ban_hang(self):
-        f1 = tk.LabelFrame(self.tab_ban, text="Kho hàng"); f1.pack(side="left", fill="both", expand=True)
-        self.tv_ban = ttk.Treeview(f1, columns=("id","ten","sl","gia"), show="headings")
-        for c,t in [("id","Mã"),("ten","Tên"),("sl","SL"),("gia","Giá")]:
-            self.tv_ban.heading(c,text=t)
-        self.tv_ban.pack(fill="both", expand=True)
-        self.tv_ban.bind("<Double-1>", self.them_gio)
-
-        f2 = tk.LabelFrame(self.tab_ban, text="Giỏ Hàng"); f2.pack(side="right", fill="both", expand=True)
-        self.tv_gio = ttk.Treeview(f2, columns=("ten","sl","tt"), show="headings")
-        for c in ["ten","sl","tt"]: self.tv_gio.heading(c,text=c)
-        self.tv_gio.pack(fill="both", expand=True)
-        self.lbl_tong = tk.Label(f2, text="Tổng: 0 VNĐ", fg="red", font=("Arial",14)); self.lbl_tong.pack(pady=5)
-        tk.Button(f2, text="THANH TOÁN", bg="orange", command=self.thanh_toan).pack()
-        tk.Button(f2, text="Xóa giỏ", command=self.xoa_gio).pack()
-        self.load_sp()
-
-    def load_sp(self):
-        for r in self.tv_ban.get_children(): self.tv_ban.delete(r)
-        for p in self.dm.load_products():
-            self.tv_ban.insert("", "end", values=(p["id"], p["ten"], p["sl"], f"{p['gia']:,}"))
-
-    def them_gio(self,e):
-        v = self.tv_ban.item(self.tv_ban.focus(),"values")
-        if not v: return
-        id_sp, ten, ton, gia = v[0], v[1], int(v[2]), int(v[3].replace(",",""))
-        top = tk.Toplevel(self); top.title("Thêm vào giỏ"); tk.Label(top, text=f"Sản phẩm: {ten}").pack()
-        e_sl = tk.Entry(top); e_sl.pack(); e_sl.focus()
-        def ok():
-            try:
-                sl = int(e_sl.get())
-                if sl <= 0:
-                    messagebox.showerror("Lỗi","Số lượng phải >0"); return
-                if sl > ton:
-                    messagebox.showerror("Lỗi","Không đủ hàng"); return
-                self.gio.append({"id":id_sp,"ten":ten,"sl":sl,"gia":gia,"tt":sl*gia,"nguoi_username": self.user["username"]})
-                self.update_gio(); top.destroy()
-            except:
-                messagebox.showerror("Lỗi","Số lượng không hợp lệ")
-        tk.Button(top, text="OK", command=ok).pack()
-
-    def update_gio(self):
-        for r in self.tv_gio.get_children(): self.tv_gio.delete(r)
         tong = 0
-        for i in self.gio:
-            tong += i["tt"]
-            self.tv_gio.insert("", "end", values=(i["ten"], i["sl"], f"{i['tt']:,}"))
-        self.lbl_tong.config(text=f"Tổng: {tong:,} VNĐ"); self.tong_tien = tong
+        for m in self.gio_hang:
+            tong += m.get("tt", 0)
+            self.tree_gio.insert("", "end", values=(m.get("ten"), m.get("sl"), f"{m.get('tt',0):,}"))
 
-    def xoa_gio(self):
-        self.gio = []; self.update_gio()
+        if self.lbl_tong_tien:
+            self.lbl_tong_tien.config(text=f"Tổng: {tong:,} VNĐ")
+
+    def xoa_gio_hang(self):
+        self.gio_hang = []
+        self.cap_nhat_gio()
 
     def thanh_toan(self):
-        if not self.gio: return
-        invoices = self.dm.load_invoices()
-        ma = f"HD{len(invoices)+1:03d}"
-        hd = {"ma":ma,"nguoi":self.user["ten"],"nguoi_username":self.user["username"],
-              "ngay": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "tong": self.tong_tien, "chitiet": self.gio}
-        self.dm.add_invoice(hd)
-        prods = self.dm.load_products()
-        for g in self.gio:
-            for p in prods:
-                if p["id"] == g["id"]:
-                    p["sl"] = max(0, p["sl"] - g["sl"])
-        self.dm.save_products(prods)
-        messagebox.showinfo("OK","Thanh toán thành công")
-        self.gio = []; self.update_gio(); self.load_sp(); self.load_ls()
+        if not self.gio_hang:
+            return
 
-    # ===================================================================
-    # ========================== LỊCH SỬ =================================
-    # ===================================================================
+        ds_sp = self.doc_file(FILE_SP)
+        map_sp = {sp.get("id"): sp for sp in ds_sp}
+
+        # kiểm tra lỗi (đúng yêu cầu: nếu SP đã bị xóa khỏi kho -> báo lỗi)
+        loi = []
+        for m in self.gio_hang:
+            pid = m.get("id")
+            if pid not in map_sp:
+                loi.append(f"- {m.get('ten')} (đã bị xóa khỏi kho)")
+            else:
+                if m.get("sl", 0) > map_sp[pid].get("sl", 0):
+                    loi.append(f"- {m.get('ten')} (không đủ tồn kho: cần {m.get('sl')} còn {map_sp[pid].get('sl',0)})")
+
+        if loi:
+            messagebox.showerror("Lỗi thanh toán", "Không thể thanh toán:\n" + "\n".join(loi))
+            self.load_data_ban_hang()
+            return
+
+        # Lưu hóa đơn
+        ds_hd = self.doc_file(FILE_HD)
+        ma_hd = f"HD{len(ds_hd)+1:03d}"
+        tong_tien = sum(x.get("tt", 0) for x in self.gio_hang)
+
+        hd_moi = {
+            "ma": ma_hd,
+            "nguoi": self.nguoi_dang_nhap.get("ten"),
+            "nguoi_username": self.nguoi_dang_nhap.get("username"),
+            "ngay": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "tong": tong_tien,
+            "chitiet": self.gio_hang
+        }
+        ds_hd.append(hd_moi)
+        self.ghi_file(FILE_HD, ds_hd)
+
+        # Trừ kho
+        for m in self.gio_hang:
+            pid = m.get("id")
+            map_sp[pid]["sl"] = map_sp[pid].get("sl", 0) - m.get("sl", 0)
+        self.ghi_file(FILE_SP, list(map_sp.values()))
+
+        messagebox.showinfo("OK", "Thanh toán thành công!")
+        self.xoa_gio_hang()
+        self.load_data_ban_hang()
+        self.load_lich_su()
+
+    # ==============================
+    # TAB LỊCH SỬ HÓA ĐƠN
+    # ==============================
+    def xay_dung_tab_lich_su(self, parent):
+        tk.Button(parent, text="Làm mới", command=self.load_lich_su).pack(pady=4)
+        tk.Button(parent, text="Xem chi tiết", bg="yellow", command=self.xem_chi_tiet_hoa_don).pack(pady=4)
+
+        self.tree_lich_su = ttk.Treeview(parent, columns=("ma", "nguoi", "ngay", "tong"), show="headings")
+        for c, t, w in [("ma", "Mã HĐ", 90), ("nguoi", "Người lập", 160), ("ngay", "Ngày giờ", 170), ("tong", "Tổng tiền", 130)]:
+            self.tree_lich_su.heading(c, text=t)
+            self.tree_lich_su.column(c, width=w)
+        self.tree_lich_su.pack(fill="both", expand=True)
+
+        self.load_lich_su()
+
+    def load_lich_su(self):
+        if not self.tree_lich_su:
+            return
+        for i in self.tree_lich_su.get_children():
+            self.tree_lich_su.delete(i)
+
+        ds = self.doc_file(FILE_HD)
+        for hd in ds:
+            self.tree_lich_su.insert("", "end", values=(hd.get("ma"), hd.get("nguoi"), hd.get("ngay"), f"{hd.get('tong',0):,}"))
+
     def xem_chi_tiet_hoa_don(self):
-        sel = self.tv_ls.focus()
-        if not sel:
-            messagebox.showerror("Lỗi", "Vui lòng chọn một hóa đơn!")
+        if not self.tree_lich_su:
+            return
+        chon = self.tree_lich_su.focus()
+        if not chon:
+            return
+        ma_hd = self.tree_lich_su.item(chon, "values")[0]
+
+        ds = self.doc_file(FILE_HD)
+        hd = next((x for x in ds if x.get("ma") == ma_hd), None)
+        if not hd:
             return
 
-        values = self.tv_ls.item(sel, "values")
-        if not values:
-            messagebox.showerror("Lỗi", "Dữ liệu chọn không hợp lệ!")
-            return
-        ma_hd = values[0]  # cột đầu là mã hóa đơn
+        top = tk.Toplevel(self.root)
+        top.title(f"Chi tiết {ma_hd}")
+        tk.Label(top, text=f"Hóa đơn: {ma_hd}  |  {hd.get('ngay','')}").pack(padx=10, pady=6)
 
-        # Load danh sách hóa đơn
-        ds = self.dm.load_invoices()
+        tv = ttk.Treeview(top, columns=("ten", "sl", "gia"), show="headings")
+        tv.heading("ten", text="Tên"); tv.heading("sl", text="SL"); tv.heading("gia", text="Giá")
+        tv.pack(fill="both", expand=True, padx=10, pady=6)
 
-        hd = None
-        for x in ds:
-            if x.get("ma") == ma_hd:
-                hd = x
-                break
-
-        if hd is None:
-            messagebox.showerror("Lỗi", "Không tìm thấy hóa đơn trong dữ liệu!")
-            return
-
-        # Tạo cửa sổ xem chi tiết
-        w = tk.Toplevel(self)
-        w.title(f"Chi tiết hóa đơn {ma_hd}")
-        w.geometry("700x500")
-
-        # -------- THÔNG TIN CHUNG ----------
-        frame_info = tk.LabelFrame(w, text="Thông tin hóa đơn")
-        frame_info.pack(fill="x", padx=10, pady=10)
-
-        info_text = (
-            f"Mã hóa đơn: {hd.get('ma')}\n"
-            f"Nhân viên lập: {hd.get('nguoi')} ({hd.get('nguoi_username')})\n"
-            f"Ngày lập: {hd.get('ngay')}\n"
-            f"Tổng tiền: {hd.get('tong',0):,} VND"
-        )
-        tk.Label(frame_info, anchor="w", justify="left", text=info_text).pack(anchor="w", padx=10, pady=5)
-
-        # -------- BẢNG CHI TIẾT ----------
-        frame_ct = tk.LabelFrame(w, text="Danh sách sản phẩm")
-        frame_ct.pack(fill="both", expand=True, padx=10, pady=10)
-
-        tv = ttk.Treeview(frame_ct,
-            columns=("ma", "ten", "sl", "gia", "tt"),
-            show="headings"
-        )
-        tv.heading("ma", text="Mã SP")
-        tv.heading("ten", text="Tên sản phẩm")
-        tv.heading("sl", text="Số lượng")
-        tv.heading("gia", text="Giá")
-        tv.heading("tt", text="Thành tiền")
-
-        tv.column("ma", width=90)
-        tv.column("ten", width=230)
-        tv.column("sl", width=80)
-        tv.column("gia", width=120)
-        tv.column("tt", width=120)
-
-        tv.pack(fill="both", expand=True)
-
-        # Đổ dữ liệu chi tiết sản phẩm
-        # ghi chú: trong hóa đơn lưu ở key 'chitiet' với từng item có id,ten,sl,gia,tt
         for sp in hd.get("chitiet", []):
-            ma_sp = sp.get("id") or sp.get("ma") or ""
-            ten_sp = sp.get("ten","")
-            sl_sp = sp.get("sl",0)
-            gia_sp = sp.get("gia",0)
-            tt_sp = sp.get("tt", sp.get("thanh_tien", sl_sp * gia_sp))
-            tv.insert("", "end", values=(ma_sp, ten_sp, sl_sp, f"{gia_sp:,}", f"{tt_sp:,}"))
+            tv.insert("", "end", values=(sp.get("ten"), sp.get("sl"), f"{sp.get('gia',0):,}"))
 
-        tk.Button(w, text="Đóng", command=w.destroy).pack(pady=10)
+    # ==============================
+    # TAB QUẢN LÝ KHO (ADMIN) + UNDO XÓA
+    # ==============================
+    def xay_dung_tab_kho(self, parent):
+        f = tk.Frame(parent)
+        f.pack(pady=5)
 
+        tk.Label(f, text="Mã:").grid(row=0, column=0); self.e_k_ma = tk.Entry(f); self.e_k_ma.grid(row=0, column=1)
+        tk.Label(f, text="Tên:").grid(row=0, column=2); self.e_k_ten = tk.Entry(f); self.e_k_ten.grid(row=0, column=3)
+        tk.Label(f, text="SL:").grid(row=0, column=4); self.e_k_sl = tk.Entry(f); self.e_k_sl.grid(row=0, column=5)
+        tk.Label(f, text="Giá:").grid(row=0, column=6); self.e_k_gia = tk.Entry(f); self.e_k_gia.grid(row=0, column=7)
 
-    def build_ls(self):
-        # tạo khu chứa nút và treeview
-        f = tk.Frame(self.tab_ls); f.pack(fill="x", pady=5)
-        tk.Button(f, text="Tải lại", command=self.load_ls).pack(side="left", padx=5)
-        tk.Button(f, text="Xem chi tiết hóa đơn", command=self.xem_chi_tiet_hoa_don,bg="yellow").pack(side="left", padx=5)
+        tk.Button(f, text="Thêm mới", command=self.kho_chuan_bi_them).grid(row=1, column=0, columnspan=2)
+        tk.Button(f, text="Sửa", command=self.kho_chuan_bi_sua).grid(row=1, column=2, columnspan=2)
+        tk.Button(f, text="Xóa", command=self.kho_xoa).grid(row=1, column=4, columnspan=2)
+        tk.Button(f, text="Lưu lại", bg="green", fg="white", command=self.kho_luu).grid(row=1, column=6, columnspan=2)
 
-        self.tv_ls = ttk.Treeview(self.tab_ls, columns=("ma","nguoi","ngay","tong"), show="headings")
-        for c,t in [("ma","Mã"),("nguoi","Người"),("ngay","Ngày"),("tong","Tổng")]:
-            self.tv_ls.heading(c,text=t)
-            self.tv_ls.column(c, width=180)
-        self.tv_ls.pack(fill="both", expand=True, padx=10, pady=6)
-        self.load_ls()
+        # NÚT QUAY LẠI (UNDO) chỉ phục hồi sau thao tác XÓA
+        tk.Button(f, text="Quay lại (Undo)", bg="orange", command=self.kho_undo).grid(row=2, column=0, columnspan=4, pady=6)
 
+        self.tree_kho = ttk.Treeview(parent, columns=("id", "ten", "sl", "gia"), show="headings")
+        for c, t, w in [("id", "Mã", 90), ("ten", "Tên", 200), ("sl", "SL", 90), ("gia", "Giá", 120)]:
+            self.tree_kho.heading(c, text=t); self.tree_kho.column(c, width=w)
+        self.tree_kho.pack(fill="both", expand=True)
+        self.tree_kho.bind("<<TreeviewSelect>>", self.kho_chon_dong)
 
-    def load_ls(self):
-        for r in self.tv_ls.get_children(): self.tv_ls.delete(r)
-        for hd in self.dm.load_invoices():
-            self.tv_ls.insert("", "end", values=(hd.get("ma"), hd.get("nguoi"), hd.get("ngay"), f"{hd.get('tong',0):,}"))
-
-    # ===================================================================
-    # ============================= KHO ==================================
-    # ===================================================================
-    def build_kho(self):
-        f = tk.LabelFrame(self.tab_kho, text="Thông tin SP"); f.pack(fill="x")
-        tk.Label(f, text="Mã").grid(row=0,column=0); self.k_ma = tk.Entry(f); self.k_ma.grid(row=0,column=1)
-        tk.Label(f, text="Tên").grid(row=0,column=2); self.k_ten = tk.Entry(f); self.k_ten.grid(row=0,column=3)
-        tk.Label(f, text="SL").grid(row=0,column=4); self.k_sl = tk.Entry(f); self.k_sl.grid(row=0,column=5)
-        tk.Label(f, text="Giá").grid(row=0,column=6); self.k_gia = tk.Entry(f); self.k_gia.grid(row=0,column=7)
-        tk.Button(f, text="Thêm", command=self.kho_them).grid(row=0,column=8)
-        tk.Button(f, text="Sửa", command=self.kho_sua).grid(row=0,column=9)
-        tk.Button(f, text="Xóa", command=self.kho_xoa).grid(row=0,column=10)
-        tk.Button(f, text="Lưu", command=self.kho_luu).grid(row=0,column=11)
-        self.tv_kho = ttk.Treeview(self.tab_kho, columns=("id","ten","sl","gia"), show="headings")
-        for c in ["id","ten","sl","gia"]: self.tv_kho.heading(c,text=c)
-        self.tv_kho.pack(fill="both", expand=True); self.tv_kho.bind("<<TreeviewSelect>>", self.chon_kho)
         self.load_kho()
 
     def load_kho(self):
-        for r in self.tv_kho.get_children(): self.tv_kho.delete(r)
-        for p in self.dm.load_products():
-            self.tv_kho.insert("", "end", values=(p["id"], p["ten"], p["sl"], f"{p['gia']:,}"))
+        if not self.tree_kho:
+            return
+        for i in self.tree_kho.get_children():
+            self.tree_kho.delete(i)
 
-    def chon_kho(self, e):
-        v = self.tv_kho.item(self.tv_kho.focus(),"values"); 
-        if not v: return
-        self.k_ma.delete(0,tk.END); self.k_ma.insert(0,v[0])
-        self.k_ten.delete(0,tk.END); self.k_ten.insert(0,v[1])
-        self.k_sl.delete(0,tk.END); self.k_sl.insert(0,v[2])
-        self.k_gia.delete(0,tk.END); self.k_gia.insert(0,v[3].replace(",",""))
+        ds = self.doc_file(FILE_SP)
+        for sp in ds:
+            self.tree_kho.insert("", "end", values=(sp.get("id"), sp.get("ten"), sp.get("sl"), f"{sp.get('gia',0):,}"))
 
-    def kho_them(self):
-        self.mode_kho = "them"
-        self.k_ma.delete(0,tk.END); self.k_ten.delete(0,tk.END); self.k_sl.delete(0, tk.END); self.k_gia.delete(0,tk.END)
+    def kho_chon_dong(self, event=None):
+        if not self.tree_kho:
+            return
+        chon = self.tree_kho.focus()
+        if not chon:
+            return
+        v = self.tree_kho.item(chon, "values")
+        self.e_k_ma.config(state="normal")
+        self.e_k_ma.delete(0, tk.END); self.e_k_ma.insert(0, v[0])
+        self.e_k_ten.delete(0, tk.END); self.e_k_ten.insert(0, v[1])
+        self.e_k_sl.delete(0, tk.END); self.e_k_sl.insert(0, v[2])
+        self.e_k_gia.delete(0, tk.END); self.e_k_gia.insert(0, str(v[3]).replace(",", ""))
 
-    def kho_sua(self):
-        v = self.tv_kho.item(self.tv_kho.focus(),"values")
-        if not v:
-            messagebox.showerror("Lỗi","Chọn sản phẩm để sửa"); return
-        self.mode_kho = "sua"
+    def kho_chuan_bi_them(self):
+        self.che_do_kho = "them"
+        self.e_k_ma.config(state="normal")
+        for e in (self.e_k_ma, self.e_k_ten, self.e_k_sl, self.e_k_gia):
+            e.delete(0, tk.END)
+        self.e_k_ma.focus()
+
+    def kho_chuan_bi_sua(self):
+        if not self.tree_kho or not self.tree_kho.selection():
+            messagebox.showerror("Lỗi", "Chọn dòng để sửa")
+            return
+        self.che_do_kho = "sua"
+        self.e_k_ma.config(state="readonly")
 
     def kho_xoa(self):
-        # Lấy dòng đang chọn
-        sel = self.tv_kho.selection()
-        if not sel:
-            messagebox.showerror("Lỗi", "Chọn 1 sản phẩm để xóa")
+        if not self.tree_kho or not self.tree_kho.selection():
             return
 
-        v = self.tv_kho.item(sel[0], "values")
-        ma = v[0]
-
-        ok = messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa SP {ma}?")
-        if not ok:
+        id_xoa = self.tree_kho.item(self.tree_kho.selection()[0], "values")[0]
+        if not messagebox.askyesno("Xóa", "Chắc chắn xóa?"):
             return
 
-        success, msg = self.dm.delete_product(ma)
-        if success:
-            messagebox.showinfo("OK", msg)
-            self.load_kho()     # cập nhật tab kho
-            self.load_sp()      # cập nhật tab bán hàng
+        ds = self.doc_file(FILE_SP)
 
-        else:
-            messagebox.showerror("Lỗi", msg)
+        # BACKUP trước khi xóa (chỉ tác động khi XÓA)
+        self.ghi_file(FILE_SP_BAK, ds)
 
+        ds = [x for x in ds if x.get("id") != id_xoa]
+        self.ghi_file(FILE_SP, ds)
+
+        self.load_kho()
+        self.load_data_ban_hang()
+
+    def kho_undo(self):
+        if not os.path.exists(FILE_SP_BAK):
+            messagebox.showerror("Lỗi", "Không có backup để phục hồi (chưa có thao tác xóa nào).")
+            return
+
+        ds_bak = self.doc_file(FILE_SP_BAK)
+        self.ghi_file(FILE_SP, ds_bak)
+
+        messagebox.showinfo("Undo", "Đã phục hồi kho từ bản backup trước khi xóa.")
+        self.load_kho()
+        self.load_data_ban_hang()
 
     def kho_luu(self):
-        id_sp = self.k_ma.get().strip(); ten = self.k_ten.get().strip()
+        id_sp = (self.e_k_ma.get() or "").strip()
+        ten = (self.e_k_ten.get() or "").strip()
         try:
-            sl = int(self.k_sl.get().strip()); gia = int(self.k_gia.get().strip())
-        except:
-            messagebox.showerror("Lỗi","SL & Giá phải là số"); return
-        if not id_sp or not ten:
-            messagebox.showerror("Lỗi","Mã & tên không được rỗng"); return
-        data = {"id":id_sp,"ten":ten,"sl":sl,"gia":gia}
-        if self.mode_kho == "them":
-            ok,msg = self.dm.add_product(data)
+            sl = int(self.e_k_sl.get())
+            gia = int(self.e_k_gia.get())
+        except Exception:
+            messagebox.showerror("Lỗi", "SL và Giá phải là số")
+            return
+
+        ds = self.doc_file(FILE_SP)
+
+        if self.che_do_kho == "them":
+            if any(x.get("id") == id_sp for x in ds):
+                messagebox.showerror("Lỗi", "Trùng mã sản phẩm")
+                return
+            ds.append({"id": id_sp, "ten": ten, "sl": sl, "gia": gia})
+
+        elif self.che_do_kho == "sua":
+            found = False
+            for x in ds:
+                if x.get("id") == id_sp:
+                    x["ten"], x["sl"], x["gia"] = ten, sl, gia
+                    found = True
+                    break
+            if not found:
+                messagebox.showerror("Lỗi", "Không tìm thấy mã để sửa")
+                return
+            self.e_k_ma.config(state="normal")
+
         else:
-            # dùng id hiện tại làm khóa update
-            ok,msg = self.dm.update_product(id_sp, data)
-        if not ok: messagebox.showerror("Lỗi",msg); return
-        messagebox.showinfo("OK",msg); self.load_kho(); self.mode_kho = None
+            messagebox.showerror("Lỗi", "Chưa chọn chế độ (Thêm/Sửa)")
+            return
 
-    # ===================================================================
-    # ========================= NHÂN SỰ (ADMIN) ===========================
-    # ===================================================================
-    def build_nhan_su(self):
-        f = tk.LabelFrame(self.tab_ns, text="Thông tin Nhân sự")
-        f.pack(fill="x", padx=10, pady=6)
+        self.ghi_file(FILE_SP, ds)
+        self.che_do_kho = ""
+        self.load_kho()
+        self.load_data_ban_hang()
 
-        # Dòng 0
-        tk.Label(f, text="Mã NV:").grid(row=0, column=0)
-        self.n_ma = tk.Entry(f); self.n_ma.grid(row=0, column=1)
+    # ==============================
+    # TAB QUẢN LÝ NHÂN SỰ (ADMIN)
+    # ==============================
+    def xay_dung_tab_nhan_su(self, parent):
+        f = tk.Frame(parent)
+        f.pack(pady=5)
 
-        tk.Label(f, text="User:").grid(row=0, column=2)
-        self.n_u = tk.Entry(f); self.n_u.grid(row=0, column=3)
+        tk.Label(f, text="Mã NV").grid(row=0, column=0); self.e_n_ma = tk.Entry(f); self.e_n_ma.grid(row=0, column=1)
+        tk.Label(f, text="User").grid(row=0, column=2); self.e_n_user = tk.Entry(f); self.e_n_user.grid(row=0, column=3)
+        tk.Label(f, text="Pass").grid(row=0, column=4); self.e_n_pass = tk.Entry(f); self.e_n_pass.grid(row=0, column=5)
 
-        tk.Label(f, text="Pass:").grid(row=0, column=4)
-        self.n_p = tk.Entry(f, show="*"); self.n_p.grid(row=0, column=5)
+        tk.Label(f, text="Tên").grid(row=1, column=0); self.e_n_ten = tk.Entry(f); self.e_n_ten.grid(row=1, column=1)
+        tk.Label(f, text="Role").grid(row=1, column=2); self.c_n_role = ttk.Combobox(f, values=["admin", "user"]); self.c_n_role.grid(row=1, column=3)
+        tk.Label(f, text="Ngày vào").grid(row=1, column=4); self.e_n_ngay = tk.Entry(f); self.e_n_ngay.grid(row=1, column=5)
+        tk.Label(f, text="Lương").grid(row=1, column=6); self.e_n_luong = tk.Entry(f); self.e_n_luong.grid(row=1, column=7)
 
-        # Dòng 1
-        tk.Label(f, text="Tên:").grid(row=1, column=0)
-        self.n_t = tk.Entry(f); self.n_t.grid(row=1, column=1)
+        tk.Button(f, text="Thêm NV", command=self.ns_chuan_bi_them).grid(row=2, column=0, columnspan=2)
+        tk.Button(f, text="Sửa NV", command=self.ns_chuan_bi_sua).grid(row=2, column=2, columnspan=2)
+        tk.Button(f, text="Xóa NV", command=self.ns_xoa).grid(row=2, column=4, columnspan=2)
+        tk.Button(f, text="Lưu NV", bg="green", fg="white", command=self.ns_luu).grid(row=2, column=6, columnspan=2)
 
-        tk.Label(f, text="Role:").grid(row=1, column=2)
-        self.n_r = ttk.Combobox(f, values=["admin","user"], state="readonly")
-        self.n_r.grid(row=1, column=3)
+        self.tree_ns = ttk.Treeview(parent, columns=("ma", "user", "ten", "role", "luong"), show="headings")
+        for c in ["ma", "user", "ten", "role", "luong"]:
+            self.tree_ns.heading(c, text=c)
+        self.tree_ns.pack(fill="both", expand=True)
+        self.tree_ns.bind("<<TreeviewSelect>>", self.ns_chon_dong)
 
-        # Dòng 2
-        tk.Label(f, text="Ngày vào làm (YYYY-MM-DD):").grid(row=2, column=0)
-        self.n_ngay = tk.Entry(f); self.n_ngay.grid(row=2, column=1)
-
-        tk.Label(f, text="Lương:").grid(row=2, column=2)
-        self.n_luong = tk.Entry(f); self.n_luong.grid(row=2, column=3)
-
-        # Dòng 3: lương cơ bản (readonly)
-        tk.Label(f, text="Lương cơ bản:").grid(row=3, column=0)
-        self.n_lcb = tk.Entry(f); self.n_lcb.grid(row=3, column=1)
-        self.n_lcb.insert(0, "1500000"); self.n_lcb.config(state="readonly")
-
-        # Nút chức năng
-        tk.Button(f, text="Thêm", command=self.ns_them).grid(row=4, column=0, pady=6)
-        tk.Button(f, text="Sửa",  command=self.ns_sua).grid(row=4, column=1)
-        tk.Button(f, text="Xóa",  command=self.ns_xoa).grid(row=4, column=2)
-        tk.Button(f, text="Lưu",  command=self.ns_luu).grid(row=4, column=3)
-
-        # Treeview nhân sự
-        cols = ("ma","user","pass","ten","role","ngay","luong")
-        self.tv_ns = ttk.Treeview(self.tab_ns, columns=cols, show="headings")
-        headers = [("ma","Mã NV"),("user","User"),("pass","Pass"),("ten","Tên"),("role","Role"),("ngay","Ngày vào"),("luong","Lương")]
-        for c, h in headers:
-            self.tv_ns.heading(c, text=h)
-            self.tv_ns.column(c, width=120)
-        self.tv_ns.pack(fill="both", expand=True, padx=10, pady=6)
-        self.tv_ns.bind("<<TreeviewSelect>>", self.chon_ns)
-
-        self.mode_ns = None
         self.load_ns()
 
     def load_ns(self):
-        for r in self.tv_ns.get_children():
-            self.tv_ns.delete(r)
-        for u in self.dm.load_users():
-            self.tv_ns.insert("", "end", values=(
-                u.get("ma_nv",""), u.get("username",""), u.get("password",""),
-                u.get("ten",""), u.get("role",""), u.get("ngay_vao_lam",""), u.get("luong",0)
-            ))
+        ds = self.doc_file(FILE_USER)
 
-    def chon_ns(self, event=None):
-        v = self.tv_ns.item(self.tv_ns.focus(), "values")
-        if not v: return
-        self.n_ma.delete(0, tk.END); self.n_ma.insert(0, v[0])
-        self.n_u.delete(0, tk.END); self.n_u.insert(0, v[1])
-        # không hiển thị pass cũ trong entry (bảo mật) — user có thể nhập pass mới nếu muốn
-        self.n_p.delete(0, tk.END)
-        self.n_t.delete(0, tk.END); self.n_t.insert(0, v[3])
-        self.n_r.set(v[4])
-        self.n_ngay.delete(0, tk.END); self.n_ngay.insert(0, v[5])
-        self.n_luong.delete(0, tk.END); self.n_luong.insert(0, v[6])
-
-    def ns_them(self):
-        self.mode_ns = "them"
-        self.n_ma.delete(0, tk.END); self.n_u.delete(0, tk.END); self.n_p.delete(0, tk.END)
-        self.n_t.delete(0, tk.END); self.n_r.set("user"); self.n_ngay.delete(0, tk.END); self.n_luong.delete(0, tk.END)
-        self.n_ma.focus()
-
-    def ns_sua(self):
-        v = self.tv_ns.item(self.tv_ns.focus(), "values")
-        if not v:
-            messagebox.showerror("Lỗi", "Chọn nhân viên để sửa")
+        if not self.tree_ns:
             return
-        self.mode_ns = "sua"
+        for i in self.tree_ns.get_children():
+            self.tree_ns.delete(i)
 
-    def ns_luu(self):
-        ma = self.n_ma.get().strip()
-        user = self.n_u.get().strip()
-        pwd = self.n_p.get().strip()
-        ten = self.n_t.get().strip()
-        role = self.n_r.get().strip()
-        ngay = self.n_ngay.get().strip()
-        luong_text = self.n_luong.get().strip()
-        LUONG_CO_BAN = 1500000
+        for u in ds:
+            ma = u.get("ma_nv")
+            if not ma:
+                continue
+            username = u.get("username", "")
+            ten = u.get("ten", "")
+            role = u.get("role", "")
+            luong = u.get("luong", "")
+            self.tree_ns.insert("", "end", values=(ma, username, ten, role, luong))
 
-        # kiểm input cơ bản
-        if not ma or not user or not ten or not role or not ngay or not luong_text:
-            messagebox.showerror("Lỗi", "Vui lòng nhập đầy đủ thông tin")
+    def ns_chon_dong(self, event=None):
+        if not self.tree_ns:
+            return
+        chon = self.tree_ns.focus()
+        if not chon:
             return
 
-        # kiểm định dạng ngày
-        try:
-            ngay_dt = datetime.strptime(ngay, "%Y-%m-%d").date()
-        except:
-            messagebox.showerror("Lỗi", "Ngày vào làm phải theo định dạng YYYY-MM-DD")
-            return
-        if ngay_dt >= date.today():
-            messagebox.showerror("Lỗi", "Ngày vào làm phải nhỏ hơn ngày hiện tại")
+        ma_nv = self.tree_ns.item(chon, "values")[0]
+        ds = self.doc_file(FILE_USER)
+        u = next((x for x in ds if x.get("ma_nv") == ma_nv), None)
+        if not u:
             return
 
-        # kiểm lương
-        try:
-            luong = int(luong_text)
-        except:
-            messagebox.showerror("Lỗi", "Lương phải là số nguyên")
+        self.e_n_ma.config(state="normal")
+        self.e_n_ma.delete(0, tk.END); self.e_n_ma.insert(0, u.get("ma_nv", ""))
+        self.e_n_user.delete(0, tk.END); self.e_n_user.insert(0, u.get("username", ""))
+        self.e_n_pass.delete(0, tk.END); self.e_n_pass.insert(0, u.get("password", ""))
+        self.e_n_ten.delete(0, tk.END); self.e_n_ten.insert(0, u.get("ten", ""))
+        self.c_n_role.set(u.get("role", ""))
+        self.e_n_ngay.delete(0, tk.END); self.e_n_ngay.insert(0, u.get("ngay_vao_lam", ""))
+        self.e_n_luong.delete(0, tk.END); self.e_n_luong.insert(0, str(u.get("luong", "")))
+
+    def ns_chuan_bi_them(self):
+        self.che_do_ns = "them"
+        for e in (self.e_n_ma, self.e_n_user, self.e_n_pass, self.e_n_ten, self.e_n_ngay, self.e_n_luong):
+            e.delete(0, tk.END)
+        self.c_n_role.set("")
+        self.e_n_ma.config(state="normal")
+        self.e_n_ma.focus()
+
+    def ns_chuan_bi_sua(self):
+        if not self.tree_ns or not self.tree_ns.selection():
+            messagebox.showerror("Lỗi", "Chọn nhân sự để sửa")
             return
-        if luong <= 0:
-            messagebox.showerror("Lỗi", "Lương phải > 0"); return
-        if luong < LUONG_CO_BAN:
-            messagebox.showerror("Lỗi", f"Lương phải >= {LUONG_CO_BAN:,}"); return
-
-        user_data = {
-            "ma_nv": ma, "username": user, "password": pwd if pwd else None,
-            "ten": ten, "role": role, "ngay_vao_lam": ngay, "luong": luong
-        }
-
-        # Nếu sửa và không nhập mật khẩu mới => giữ pass cũ
-        if self.mode_ns == "sua" and not pwd:
-            old = self.dm.find_user_by_ma(ma)
-            if old:
-                user_data["password"] = old.get("password", "")
-
-        if self.mode_ns == "them":
-            ok, msg = self.dm.add_user(user_data)
-        else:
-            # ns_luu khi sửa: dùng ma cũ làm khóa
-            sel = self.tv_ns.item(self.tv_ns.focus(), "values")
-            ma_cu = sel[0] if sel else ma
-            ok, msg = self.dm.update_user(ma_cu, user_data)
-
-        if not ok:
-            messagebox.showerror("Lỗi", msg); return
-
-        messagebox.showinfo("OK", msg)
-        self.mode_ns = None
-        self.load_ns()
+        self.che_do_ns = "sua"
+        self.e_n_ma.config(state="readonly")
 
     def ns_xoa(self):
-        v = self.tv_ns.item(self.tv_ns.focus(), "values")
-        if not v:
-            messagebox.showerror("Lỗi", "Chọn nhân viên để xóa"); return
-        ma = v[0]
-        if not messagebox.askyesno("Xóa", f"Bạn có muốn xóa nhân viên {ma}?"):
+        if not self.tree_ns or not self.tree_ns.selection():
             return
-        ok, msg = self.dm.delete_user(ma, current_user_username=self.user.get("username") if self.user else None)
-        if not ok:
-            messagebox.showerror("Lỗi", msg); return
-        messagebox.showinfo("OK", msg); self.load_ns()
+        ma = self.tree_ns.item(self.tree_ns.selection()[0], "values")[0]
+        if not messagebox.askyesno("Xóa", "Chắc chắn xóa nhân sự này?"):
+            return
+        ds = [x for x in self.doc_file(FILE_USER) if x.get("ma_nv") != ma]
+        self.ghi_file(FILE_USER, ds)
+        self.load_ns()
+
+    def ns_luu(self):
+        ma = (self.e_n_ma.get() or "").strip()
+        username = (self.e_n_user.get() or "").strip()
+        pw = (self.e_n_pass.get() or "").strip()
+        ten = (self.e_n_ten.get() or "").strip()
+        role = (self.c_n_role.get() or "").strip()
+        ngay = (self.e_n_ngay.get() or "").strip()
+        try:
+            luong = int(self.e_n_luong.get())
+        except Exception:
+            messagebox.showerror("Lỗi", "Lương phải là số")
+            return
+
+        if luong < 1500000:
+            messagebox.showerror("Lỗi", "Lương phải >= 1.500.000")
+            return
+
+        try:
+            datetime.strptime(ngay, "%Y-%m-%d")
+        except Exception:
+            messagebox.showerror("Lỗi", "Ngày vào làm phải dạng YYYY-MM-DD")
+            return
+
+        ds = self.doc_file(FILE_USER)
+        nguoi = {
+            "ma_nv": ma,
+            "username": username,
+            "password": pw,
+            "role": role,
+            "ten": ten,
+            "ngay_vao_lam": ngay,
+            "luong": luong
+        }
+
+        if self.che_do_ns == "them":
+            if any(x.get("ma_nv") == ma for x in ds):
+                messagebox.showerror("Lỗi", "Trùng mã nhân viên")
+                return
+            ds.append(nguoi)
+
+        elif self.che_do_ns == "sua":
+            found = False
+            for i, x in enumerate(ds):
+                if x.get("ma_nv") == ma:
+                    ds[i] = nguoi
+                    found = True
+                    break
+            if not found:
+                messagebox.showerror("Lỗi", "Không tìm thấy mã nhân viên để sửa")
+                return
+            self.e_n_ma.config(state="normal")
+
+        else:
+            messagebox.showerror("Lỗi", "Chưa chọn chế độ (Thêm/Sửa)")
+            return
+
+        self.ghi_file(FILE_USER, ds)
+        self.che_do_ns = ""
+        self.load_ns()
+        messagebox.showinfo("OK", "Lưu nhân sự thành công")
+
+    # ==============================
+    # NẠP DỮ LIỆU TỪ API (ADMIN)
+    # ==============================
+    def nap_du_lieu_api(self):
+        try:
+            url = "https://api.npoint.io/881fe47e8b6245bbe49a"
+            resp = requests.get(url, timeout=15)
+            resp.raise_for_status()
+            data_api = resp.json()
+
+            if isinstance(data_api, list):
+                products = data_api
+            else:
+                products = data_api.get("products", data_api.get("items", []))
+
+            ds_moi = []
+            for i, sp in enumerate(products):
+                id_ = sp.get("id") or sp.get("ID") or sp.get("ma") or f"API_{i}"
+                ten = sp.get("ten") or sp.get("name") or sp.get("title") or sp.get("product_name") or "No Name"
+                sl = int(sp.get("sl") or sp.get("stock") or sp.get("quantity") or 0)
+                gia = int(sp.get("gia") or sp.get("price") or 0)
+                ds_moi.append({"id": str(id_), "ma": str(id_), "ten": ten, "sl": sl, "gia": gia})
+
+            self.ghi_file(FILE_SP, ds_moi)
+            messagebox.showinfo("API", f"Đã nhập {len(ds_moi)} sản phẩm từ API")
+            self.load_kho()
+            self.load_data_ban_hang()
+
+        except Exception as e:
+            messagebox.showerror("Lỗi API", str(e))
+
+    # ==============================
+    def chay(self):
+        self.root.mainloop()
 
 
-# ============================
-# CHẠY CHƯƠNG TRÌNH
-# ============================
 if __name__ == "__main__":
-    UngDung().mainloop()
+    UngDung().chay()
