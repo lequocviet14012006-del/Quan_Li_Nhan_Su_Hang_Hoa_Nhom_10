@@ -1,0 +1,38 @@
+[
+    {
+        "ma_sp": "SP001",
+        "ten_hang": "Laptop Dell XPS 13",
+        "so_luong_ton": 7,
+        "don_gia": 25000000,
+        "nha_cung_cap": "Dell VN"
+    },
+    {
+        "ma_sp": "SP002",
+        "ten_hang": "iPhone 15 Pro Max",
+        "so_luong_ton": 20,
+        "don_gia": 34000000,
+        "nha_cung_cap": "Apple"
+    },
+    {
+        "ma_sp": "SP003",
+        "ten_hang": "Chuột Logitech G502",
+        "so_luong_ton": 50,
+        "don_gia": 1200000,
+        "nha_cung_cap": "Logitech"
+    },
+    {
+        "ma_sp": "SP004",
+        "ten_hang": "Bàn phím cơ Keychron",
+        "so_luong_ton": 30,
+        "don_gia": 2500000,
+        "nha_cung_cap": "SiliconZ"
+    },
+    {
+        "ma_sp": "SP005",
+        "ten_hang": "Tai nghe Sony WH-1000XM5",
+        "so_luong_ton": 15,
+        "don_gia": 8000000,
+        "nha_cung_cap": "Sony"
+        
+    }
+]

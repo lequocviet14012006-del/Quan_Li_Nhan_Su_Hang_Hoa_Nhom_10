@@ -1,0 +1,20 @@
+[
+    {
+        "ma_nv": "NV000",
+        "username": "admin",
+        "password": "123",
+        "role": "admin",
+        "ten": "Quản Trị Viên",
+        "ngay_vao_lam": "2020-01-01",
+        "luong": 2000000
+    },
+    {
+        "ma_nv": "NV00004",
+        "username": "b",
+        "password": "123",
+        "role": "user",
+        "ten": "s",
+        "ngay_vao_lam": "2012-12-2",
+        "luong": 15000000
+    }
+]
